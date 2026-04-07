@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coral Data Sheet</title>
+    <style>
+        /* Set up the page for printing */
+        @page {
+            size: letter portrait;
+            margin: 0.5in;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9pt; /* Reduced font size to fit more content */
+        }
+
+        /* The main container that leaves space for the corner markers */
+        .content-wrapper {
+            padding: 30px; /* Provides a "safe zone" for content */
+        }
+
+        /* --- Fiducial Markers --- */
+        .fiducial {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: black;
+        }
+
+        /* --- Table Styling --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            table-layout: fixed; /* Ensures column widths are respected */
+        }
+
+        th, td {
+            /* CHANGE: Table lines are now a medium grey */
+            border: 1px solid #999; /* #999 is a grey hex code */
+            padding: 3px 5px;
+            text-align: center;
+            word-wrap: break-word;
+        }
+
+        th {
+            font-weight: bold;
+            font-size: 8pt;
+        }
+
+        /* The box for writing scores in. It remains black to stand out. */
+        .score-box {
+            border: 2px solid black;
+            width: 35px;
+            height: 35px;
+            margin: 0 auto;
+        }
+
+        /* --- Column Widths --- */
+        /* CHANGE: Adjusted column widths */
+        .col-id { width: 14%; } /* Made narrower */
+        .col-notes { width: 30%; text-align: left; } /* Made wider */
+
+    </style>
+</head>
+<body>
+    <!-- Fiducial markers are placed first, in the corners of the page -->
+    <div class="fiducial" style="top: 10px; left: 10px;"></div>
+    <div class="fiducial" style="top: 10px; right: 10px;"></div>
+    <div class="fiducial" style="bottom: 10px; left: 10px;"></div>
+    <div class="fiducial" style="bottom: 10px; right: 10px;"></div>
+
+    <!-- All content now goes inside this wrapper to avoid overlapping the markers -->
+    <div class="content-wrapper">
+
+        <!-- Experiment metadata at the top -->
+        <!-- CHANGE: Made QR code larger -->
+        <img src="{{ qr_code_path }}" alt="QR Code" style="float: right; width: 110px;">
+        <p style="margin: 0;"><strong>Experiment ID:</strong> {{ experiment_id }}</p>
+        <p style="margin: 0;"><strong>Date Generated:</strong> {{ date }}</p>
+
+        <!-- The main data table -->
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-id">Coral ID</th>
+                    <th>Tank #</th>
+                    <th>T0 VBS</th>
+                    <!-- Headers with blanks for temperature -->
+                    <th>Day 1<br>Temp:_____</th>
+                    <th>Day 2<br>Temp:_____</th>
+                    <th>Day 3<br>Temp:_____</th>
+                    <th>Day 4<br>Temp:_____</th>
+                    <th class="col-notes">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- This loop generates a row for each coral ID -->
+                {% for coral_id in coral_ids %}
+                <tr>
+                    <td style="text-align: left;">{{ coral_id }}</td>
+                    <td><div class="score-box"></div></td> <!-- Tank Number -->
+                    <td><div class="score-box"></div></td> <!-- T0 Score -->
+                    <td><div class="score-box"></div></td> <!-- Day 1 Score -->
+                    <td><div class="score-box"></div></td> <!-- Day 2 Score -->
+                    <td><div class="score-box"></div></td> <!-- Day 3 Score -->
+                    <td><div class="score-box"></div></td> <!-- Day 4 Score -->
+                    <td></td> <!-- Notes -->
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+</body>
+</html>

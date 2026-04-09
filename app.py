@@ -1,61 +1,204 @@
+# app.py
+"""Main Streamlit app for Coral Data Toolkit"""
+
 import streamlit as st
-import qrcode
-from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML
-import json
-import base64
-from io import BytesIO
+import numpy as np
+import pandas as pd
+from experiment_planner import generate_pdf
+from form_digitizer import process_form_image
 
-# --- 1. SET UP THE USER INTERFACE ---
-st.title("Coral Data Sheet Generator")
+# ==============================================================================
+# === STREAMLIT UI =============================================================
+# ==============================================================================
 
-# Get user inputs
-exp_id = st.text_input("Experiment ID", "W24-R3")
-exp_date = st.date_input("Date")
-# Use a text area for a list of coral IDs, one per line
-coral_ids_text = st.text_area("Coral IDs (one per line)", "ACRO-001\nACRO-002\nPORI-015")
-coral_ids = coral_ids_text.strip().split('\n')
+# Sidebar with navigation buttons
+st.sidebar.title("🪸 Coral Data Toolkit")
+st.sidebar.markdown("---")
 
-# --- 2. THE LOGIC WHEN THE BUTTON IS CLICKED ---
-if st.button("Generate Printable PDF"):
-    # Create a dictionary of data for the QR code
-    qr_data = {
-        "experiment_id": exp_id,
-        "date": exp_date.strftime("%Y-%m-%d"),
-        "num_corals": len(coral_ids)
-    }
+# Navigation buttons in sidebar
+if st.sidebar.button("📖 Instructions", use_container_width=True):
+    st.session_state.page = "Instructions"
 
-    # Generate QR code and save it as an in-memory image
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(json.dumps(qr_data))
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
+if st.sidebar.button("🧪 Experiment Planner", use_container_width=True):
+    st.session_state.page = "Experiment Planner"
+
+if st.sidebar.button("📷 Datasheet Upload", use_container_width=True):
+    st.session_state.page = "Datasheet Upload"
+
+# Initialize page if not set
+if 'page' not in st.session_state:
+    st.session_state.page = "Instructions"
+
+# ==============================================================================
+# === PAGE 0: INSTRUCTIONS =====================================================
+# ==============================================================================
+
+if st.session_state.page == "Instructions":
+    # Load and display instructions from markdown file
+    try:
+        with open('instructions.md', 'r') as f:
+            instructions_content = f.read()
+        st.markdown(instructions_content)
+    except FileNotFoundError:
+        st.error("Instructions file not found. Please ensure 'instructions.md' is in the same directory as the app.")
+
+# ==============================================================================
+# === PAGE 1: EXPERIMENT PLANNER ===============================================
+# ==============================================================================
+
+elif st.session_state.page == "Experiment Planner":
+    st.title("🧪 Experiment Planner")
+    st.write("Set up your experiment and generate the baseline (Day 0) data collection sheet.")
+
+    # Experiment metadata (with character limit for QR code)
+    exp_name = st.text_input(
+        "Experiment Name", 
+        "My Experiment",
+        max_chars=20,
+        help="Choose a name for the experiment (20 character max)"
+    )
     
-    # To use the image in HTML, we embed it using base64
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    qr_code_path = f"data:image/png;base64,{img_str}"
-
-    # --- 3. RENDER THE HTML TEMPLATE ---
-    env = Environment(loader=FileSystemLoader('.'))
-    template = env.get_template("template.html")
-
-    html_out = template.render(
-        experiment_id=exp_id,
-        date=exp_date.strftime("%B %d, %Y"),
-        coral_ids=coral_ids,
-        qr_code_path=qr_code_path
+    start_date = st.date_input("Start Date")
+    
+    # Baseline temperature (required)
+    baseline_temp = st.number_input(
+        "Baseline Temperature (°C)", 
+        min_value=25.0, 
+        max_value=40.0, 
+        value=29.0,
+        step=0.5,
+        help="Enter the baseline (control) temperature for the experiment"
     )
 
-    # --- 4. CONVERT HTML TO PDF IN MEMORY ---
-    pdf_bytes = HTML(string=html_out).write_pdf()
-
-    # --- 5. PROVIDE PDF FOR DOWNLOAD ---
-    st.success("PDF Generated Successfully!")
-    st.download_button(
-        label="Download PDF",
-        data=pdf_bytes,
-        file_name=f"{exp_id}_{exp_date.strftime('%Y-%m-%d')}.pdf",
-        mime="application/pdf",
+    # First ramp peak temperature (required)
+    peak_1_temp = st.number_input(
+        "First Ramp Temperature (°C)", 
+        min_value=25.0, 
+        max_value=40.0, 
+        value=32.0,
+        step=0.5,
+        help="Enter the peak temperature of the first heat ramp"
     )
+
+    # Coral ID input (usually 24 IDs for 6x4 grid)
+    st.write("**Enter Coral IDs** (one per line, or paste column)")
+    
+    # Generate default coral IDs for convenience
+    default_ids = "\n".join([
+        f"ACRO-{str(i+1).zfill(3)}" if i < 12 else f"ACRO-{str(i-11).zfill(3)}"
+        for i in range(4)
+    ])
+    
+    coral_ids_text = st.text_area("Coral IDs", default_ids, height=300)
+    
+    # Generate PDF button
+    if st.button("Generate Day 0 Data Sheet"):
+        coral_ids = [cid.strip() for cid in coral_ids_text.strip().split('\n') if cid.strip()]
+        
+        try:
+            # Assign label as day 0
+            day_label = "Day 0"
+            
+            # Call experiment planner with starting temperature
+            pdf_bytes = generate_pdf(exp_name, start_date, day_label, coral_ids, baseline_temp, peak_1_temp)
+            
+            st.success(f"✅ Data sheet generated successfully!")
+            
+            # Download button
+            filename = f"{exp_name}_Day0_{start_date.strftime('%Y-%m-%d')}.pdf"
+            st.download_button(
+                label=f"📄 Download Data Sheet",
+                data=pdf_bytes,
+                file_name=filename,
+                mime="application/pdf",
+            )
+            
+        except Exception as e:
+            st.error(f"Error generating PDF: {e}")
+
+# ==============================================================================
+# === PAGE 2: DATASHEET UPLOAD =================================================
+# ==============================================================================
+
+elif st.session_state.page == "Datasheet Upload":
+    st.title("📷 Datasheet Upload")
+    st.write("Upload a photo of a completed data sheet to extract the data.")
+
+    # Upload image file
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+    default_ids = "\n".join([
+        f"ACRO-{str(i+1).zfill(3)}" if i < 12 else f"ACRO-{str(i-11).zfill(3)}-C"
+        for i in range(4)
+    ])
+    
+    st.write("**Enter Coral IDs** (one per line, or paste column)")
+
+    coral_ids_text = st.text_area("Coral IDs", default_ids, height=300)
+
+    # Process image button
+    if st.button("Process Image"):
+        if uploaded_file is not None and coral_ids_text.strip():
+            coral_ids = [cid.strip() for cid in coral_ids_text.strip().split('\n') if cid.strip()]
+            
+            with st.spinner("Processing... This may take a moment."):
+                try:
+                    # Read uploaded file as bytes
+                    image_bytes = uploaded_file.read()
+                    
+                    # Call form digitizer pipeline
+                    df, metadata = process_form_image(image_bytes, coral_ids)
+                    
+                    # Store in session state (persists across re-renders)
+                    st.session_state.processed_df = df
+                    st.session_state.csv_filename = f"{metadata['name']}_{metadata['daylabel']}.csv"
+                    
+                    st.success("✅ Processing Complete!")
+                    
+                except Exception as e:
+                    st.error(f"❌ An error occurred: {e}")
+                    st.info("Check that the image is clear and all 4 corner markers are visible.")
+        else:
+            st.warning("Please upload a file and provide Coral IDs.")
+
+ # Display results if they exist in session state
+    if 'processed_df' in st.session_state:
+        st.subheader("Extracted Data")
+        
+        df = st.session_state.processed_df
+        
+        # Get the score column name (it's dynamically named based on temperature)
+        score_col = [col for col in df.columns if col.startswith('T_') and col.endswith('_Score')]
+        score_col = score_col[0] if score_col else 'VBS_Score'
+        
+        # Calculate data quality metrics
+        total_cells = len(df)
+        
+        empty_cells = df[score_col].isna().sum()
+        hyphen_cells = (df[score_col] == '-').sum()
+        question_cells = (df[score_col] == '?').sum()
+        digit_cells = total_cells - empty_cells - hyphen_cells - question_cells
+        
+        # Display quality metrics in columns
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Recognized Digits", digit_cells)
+        col2.metric("Intentional N/A (-)", hyphen_cells)
+        col3.metric("Empty Boxes", empty_cells)
+        col4.metric("Needs Review (?)", question_cells)
+        
+        # Warning for low-confidence predictions
+        if question_cells > 0:
+            st.warning(f"⚠️ {question_cells} cell(s) flagged for manual review due to low confidence.")
+        
+        # Show dataframe
+        st.dataframe(df)
+
+        # CSV download button
+        csv_data = df.to_csv(index=False).encode('utf-8')
+        
+        st.download_button(
+            label="📥 Download as CSV",
+            data=csv_data,
+            file_name=st.session_state.csv_filename,
+            mime='text/csv',
+        )

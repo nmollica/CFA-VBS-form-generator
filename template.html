@@ -1,116 +1,283 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Coral Data Sheet</title>
+    <title>Coral Sample Layout</title>
     <style>
-        /* Set up the page for printing */
         @page {
-            size: letter portrait;
-            margin: 0.5in;
+            size: letter landscape;
+            margin: 0;
         }
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 9pt; /* Reduced font size to fit more content */
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+            position: relative;
+            width: 11in;
+            height: 8.5in;
         }
 
-        /* The main container that leaves space for the corner markers */
-        .content-wrapper {
-            padding: 30px; /* Provides a "safe zone" for content */
-        }
-
-        /* --- Fiducial Markers --- */
-        .fiducial {
+        /* ArUco markers - smaller size */
+        .aruco-marker {
             position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: black;
+            width: 0.4in;
+            height: 0.4in;
         }
 
-        /* --- Table Styling --- */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            table-layout: fixed; /* Ensures column widths are respected */
-        }
-
-        th, td {
-            /* CHANGE: Table lines are now a medium grey */
-            border: 1px solid #999; /* #999 is a grey hex code */
-            padding: 3px 5px;
-            text-align: center;
-            word-wrap: break-word;
-        }
-
-        th {
+        /* Experiment name - 1 inch from top and left */
+        .experiment-name {
+            position: absolute;
+            top: 1in;
+            left: 1in;
             font-weight: bold;
-            font-size: 8pt;
+            font-size: 12pt;
         }
 
-        /* The box for writing scores in. It remains black to stand out. */
-        .score-box {
+        /* Date and temperature - next line */
+        .experiment-info {
+            position: absolute;
+            top: 1.3in;
+            left: 1in;
+            font-size: 10pt;
+        }
+
+        /* QR code - 1 inch from top right corner */
+        .qr-code {
+            position: absolute;
+            top: 1in;
+            right: 1in;
+            width: 1in;
+            height: 1in;
+        }
+
+        /* Container for the four boxes - 2x2 layout */
+        .boxes-container {
+            position: absolute;
+            top: 2.25in; /* Moved down 0.25in from 2in */
+            left: 1in;
+            width: 9in; /* 11in - 2in (1in margins on each side) */
+        }
+
+        /* Box wrapper - includes title and box */
+        .box-wrapper {
+            float: left;
+            width: 4.375in; /* (9in - 0.25in gap) / 2 */
+            margin-right: 0.25in;
+            margin-bottom: 0.25in;
+        }
+
+        /* Remove margin from every 2nd box (right column) */
+        .box-wrapper:nth-child(2n) {
+            margin-right: 0;
+        }
+
+        /* Box title */
+        .box-title {
+            font-weight: bold;
+            font-size: 9pt;
+            margin-bottom: 3px;
+            text-align: center;
+        }
+
+        /* Each box - hard coded 2.5 inches tall with padding on all sides */
+        .box {
             border: 2px solid black;
-            width: 35px;
-            height: 35px;
-            margin: 0 auto;
+            box-sizing: border-box;
+            padding: 5px; /* Padding on all sides */
+            width: 100%;
+            height: 2.5in;
         }
 
-        /* --- Column Widths --- */
-        /* CHANGE: Adjusted column widths */
-        .col-id { width: 14%; } /* Made narrower */
-        .col-notes { width: 30%; text-align: left; } /* Made wider */
+        /* Table inside each box - 4 rows, 6 columns */
+        .sample-table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* Forces equal column widths */
+        }
+
+        /* Hard-coded row height - accounting for top and bottom padding */
+        /* 2.5in box - 10px total padding (5px top + 5px bottom) ≈ 2.36in */
+        /* 2.36in / 4 rows ≈ 0.59in per row */
+        .sample-table tr {
+            height: 0.59in;
+        }
+
+        /* Equal column widths - let table-layout: fixed distribute them evenly */
+        .sample-table td {
+            border: 1px solid black;
+            text-align: center;
+            vertical-align: top;
+            font-size: 7pt;
+            padding: 2px;
+            overflow: hidden;
+            word-wrap: break-word;
+            box-sizing: border-box;
+        }
+
+        /* Control row styling - italics and grey */
+        .sample-table td.control {
+            font-style: italic;
+            color: #666666;
+        }
+
+        /* Data entry box - square, about 3 lines of text tall */
+        .data-entry-box {
+            width: 21pt; /* 3 lines * 7pt font = 21pt */
+            height: 21pt;
+            border: 2px solid black;
+            margin: 2px auto 0 auto; /* Center horizontally, small gap from text */
+            background-color: white;
+            box-sizing: border-box;
+        }
 
     </style>
 </head>
 <body>
-    <!-- Fiducial markers are placed first, in the corners of the page -->
-    <div class="fiducial" style="top: 10px; left: 10px;"></div>
-    <div class="fiducial" style="top: 10px; right: 10px;"></div>
-    <div class="fiducial" style="bottom: 10px; left: 10px;"></div>
-    <div class="fiducial" style="bottom: 10px; right: 10px;"></div>
+    <!-- ArUco markers - 0.3in from edges, with equal top and bottom margins -->
+    <!-- Marker IDs: 0=Top-Left, 1=Top-Right, 2=Bottom-Left, 3=Bottom-Right -->
+    <!-- Page height is 8.5in, so bottom markers are at 8.5in - 0.3in - 0.4in = 7.8in from top -->
+    <img src="{{ aruco_tl }}" class="aruco-marker" style="top: 0.3in; left: 0.3in;" alt="ArUco TL">
+    <img src="{{ aruco_tr }}" class="aruco-marker" style="top: 0.3in; right: 0.3in;" alt="ArUco TR">
+    <img src="{{ aruco_bl }}" class="aruco-marker" style="top: 7.8in; left: 0.3in;" alt="ArUco BL">
+    <img src="{{ aruco_br }}" class="aruco-marker" style="top: 7.8in; right: 0.3in;" alt="ArUco BR">
 
-    <!-- All content now goes inside this wrapper to avoid overlapping the markers -->
-    <div class="content-wrapper">
+    <!-- 2) Experiment name at 1 inch from top and left -->
+    <div class="experiment-name">{{ experiment_id }} | {{day}}</div>
 
-        <!-- Experiment metadata at the top -->
-        <!-- CHANGE: Made QR code larger -->
-        <img src="{{ qr_code_path }}" alt="QR Code" style="float: right; width: 110px;">
-        <p style="margin: 0;"><strong>Experiment ID:</strong> {{ experiment_id }}</p>
-        <p style="margin: 0;"><strong>Date Generated:</strong> {{ date }}</p>
+    <!-- 3) Date and temperature on next line -->
+    <div class="experiment-info">{{ date }} | Baseline temperature: {{ baseline_temperature }}°C | next ramp: {{ new_peak_temperature }}°C</div>
 
-        <!-- The main data table -->
-        <table>
-            <thead>
-                <tr>
-                    <th class="col-id">Coral ID</th>
-                    <th>Tank #</th>
-                    <th>T0 VBS</th>
-                    <!-- Headers with blanks for temperature -->
-                    <th>Day 1<br>Temp:_____</th>
-                    <th>Day 2<br>Temp:_____</th>
-                    <th>Day 3<br>Temp:_____</th>
-                    <th>Day 4<br>Temp:_____</th>
-                    <th class="col-notes">Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- This loop generates a row for each coral ID -->
-                {% for coral_id in coral_ids %}
-                <tr>
-                    <td style="text-align: left;">{{ coral_id }}</td>
-                    <td><div class="score-box"></div></td> <!-- Tank Number -->
-                    <td><div class="score-box"></div></td> <!-- T0 Score -->
-                    <td><div class="score-box"></div></td> <!-- Day 1 Score -->
-                    <td><div class="score-box"></div></td> <!-- Day 2 Score -->
-                    <td><div class="score-box"></div></td> <!-- Day 3 Score -->
-                    <td><div class="score-box"></div></td> <!-- Day 4 Score -->
-                    <td></td> <!-- Notes -->
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- 4) QR code 1 inch from top right corner -->
+    <img src="{{ qr_code_path }}" alt="QR Code" class="qr-code">
 
+    <!-- 5) Four boxes in 2x2 grid, moved down 0.25in with titles -->
+    <div class="boxes-container">
+        <!-- Box 1: Top Left -->
+        <div class="box-wrapper">
+            <div class="box-title">Sheet 1</div>
+            <div class="box">
+                <table class="sample-table">
+                    {% for row_idx in range(4) %}
+                    <tr>
+                        {% for col_idx in range(6) %}
+                            {% set coral_idx = (0 * 6) + col_idx %}
+                            {% if coral_idx < coral_ids|length %}
+                                {# This column has data #}
+                                {% if row_idx == 0 %}
+                                    <td>{{ coral_ids[coral_idx] }}_A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 1 %}
+                                    <td class="control">Control A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 2 %}
+                                    <td>{{ coral_ids[coral_idx] }}_B<div class="data-entry-box"></div></td>
+                                {% else %}
+                                    <td class="control">Control B<div class="data-entry-box"></div></td>
+                                {% endif %}
+                            {% else %}
+                                {# No data for this column #}
+                                <td></td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Box 2: Top Right -->
+        <div class="box-wrapper">
+            <div class="box-title">Sheet 2</div>
+            <div class="box">
+                <table class="sample-table">
+                    {% for row_idx in range(4) %}
+                    <tr>
+                        {% for col_idx in range(6) %}
+                            {% set coral_idx = (1 * 6) + col_idx %}
+                            {% if coral_idx < coral_ids|length %}
+                                {# This column has data #}
+                                {% if row_idx == 0 %}
+                                    <td>{{ coral_ids[coral_idx] }}_A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 1 %}
+                                    <td class="control">Control_A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 2 %}
+                                    <td>{{ coral_ids[coral_idx] }}_B<div class="data-entry-box"></div></td>
+                                {% else %}
+                                    <td class="control">Control_B<div class="data-entry-box"></div></td>
+                                {% endif %}
+                            {% else %}
+                                {# No data for this column #}
+                                <td></td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Box 3: Bottom Left -->
+        <div class="box-wrapper">
+            <div class="box-title">Sheet 3</div>
+            <div class="box">
+                <table class="sample-table">
+                    {% for row_idx in range(4) %}
+                    <tr>
+                        {% for col_idx in range(6) %}
+                            {% set coral_idx = (2 * 6) + col_idx %}
+                            {% if coral_idx < coral_ids|length %}
+                                {# This column has data #}
+                                {% if row_idx == 0 %}
+                                    <td>{{ coral_ids[coral_idx] }}_A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 1 %}
+                                    <td class="control">Control_A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 2 %}
+                                    <td>{{ coral_ids[coral_idx] }}_B<div class="data-entry-box"></div></td>
+                                {% else %}
+                                    <td class="control">Control_B<div class="data-entry-box"></div></td>
+                                {% endif %}
+                            {% else %}
+                                {# No data for this column #}
+                                <td></td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Box 4: Bottom Right -->
+        <div class="box-wrapper">
+            <div class="box-title">Sheet 4</div>
+            <div class="box">
+                <table class="sample-table">
+                    {% for row_idx in range(4) %}
+                    <tr>
+                        {% for col_idx in range(6) %}
+                            {% set coral_idx = (3 * 6) + col_idx %}
+                            {% if coral_idx < coral_ids|length %}
+                                {# This column has data #}
+                                {% if row_idx == 0 %}
+                                    <td>{{ coral_ids[coral_idx] }}_A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 1 %}
+                                    <td class="control">Control_A<div class="data-entry-box"></div></td>
+                                {% elif row_idx == 2 %}
+                                    <td>{{ coral_ids[coral_idx] }}_B<div class="data-entry-box"></div></td>
+                                {% else %}
+                                    <td class="control">Control_B<div class="data-entry-box"></div></td>
+                                {% endif %}
+                            {% else %}
+                                {# No data for this column #}
+                                <td></td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
     </div>
+
 </body>
 </html>

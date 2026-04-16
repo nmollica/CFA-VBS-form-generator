@@ -71,7 +71,7 @@ BOX_OFFSET_Y = CELL_PADDING + TEXT_RENDERED_HEIGHT + BOX_TOP_MARGIN  # 2 + 10 + 
 DIGIT_MODEL_PATH = 'digit_model.h5'
 CONFIDENCE_THRESHOLD = 0.6
 EMPTY_BOX_THRESHOLD = 0.05
-MIN_CONTOUR_AREA = 20
+MIN_CONTOUR_AREA = 10
 
 # Margin for cropping out the square border of the boxes:
 BORDER_CROP_MARGIN = 4  # pixels

@@ -3,9 +3,10 @@
 
 import streamlit as st
 import numpy as np
-import pandas as pd
-from experiment_planner import generate_pdf
+from experiment_planner import generate_pdf, calculate_next_ramp
 from form_digitizer import process_form_image
+from datetime import datetime, timedelta
+
 
 # ==============================================================================
 # === STREAMLIT UI =============================================================
@@ -151,6 +152,7 @@ elif st.session_state.page == "Datasheet Upload":
                     
                     # Store in session state (persists across re-renders)
                     st.session_state.processed_df = df
+                    st.session_state.metadata = metadata
                     st.session_state.csv_filename = f"{metadata['name']}_{metadata['daylabel']}.csv"
                     
                     st.success("✅ Processing Complete!")
@@ -161,8 +163,29 @@ elif st.session_state.page == "Datasheet Upload":
         else:
             st.warning("Please upload a file and provide Coral IDs.")
 
- # Display results if they exist in session state
+    # Display results if they exist in session state
     if 'processed_df' in st.session_state:
+        # Display QR Code Metadata
+        st.subheader("Experiment Metadata (from QR Code)")
+
+        metadata = st.session_state.get('metadata', {})
+                
+        # Display in a nice formatted way
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Experiment Name", metadata.get('name', 'not found'))
+            st.metric("Date", metadata.get('date', 'N/A'))
+        
+        with col2:
+            st.metric("Day Label", metadata.get('daylabel', 'not found'))
+            st.metric("Baseline Temp (°C)", metadata.get('basetemp', 'not found'))
+        
+        with col3:
+            st.metric("Peak Temp (°C)", metadata.get('peaktemp', 'not found'))
+        
+        st.markdown("---")
+        
         st.subheader("Extracted Data")
         
         df = st.session_state.processed_df
@@ -202,3 +225,55 @@ elif st.session_state.page == "Datasheet Upload":
             file_name=st.session_state.csv_filename,
             mime='text/csv',
         )
+    
+        st.markdown("---")
+        st.subheader("Generate a datasheet for the next day")
+        
+        if st.button("Generate New Sheet"):
+            try:
+                # Get metadata from the processed form
+                metadata = st.session_state.get('metadata', {})
+                
+                # Increment day label
+                current_day = metadata.get('daylabel', 'Day 0')
+                day_num = int(current_day.split()[-1])
+                next_day = f"Day {day_num + 1}"
+                
+                # Get other metadata
+                exp_name = metadata.get('name', 'Experiment')
+                baseline_temp = metadata.get('basetemp')
+
+                # Calculate recommended next day temp
+                current_peak_temp = float(metadata.get('peaktemp'))
+                next_peak_temp = calculate_next_ramp(current_peak_temp,df[score_col],day_num)
+
+                # Get current date
+                current_date = datetime.strptime(metadata.get('date', ''), '%Y-%m-%d')
+                next_date = current_date + timedelta(days=1)
+                
+                # Get coral IDs from the text area above
+                coral_ids = [cid.strip() for cid in coral_ids_text.strip().split('\n') if cid.strip()]
+                
+                # Generate PDF for next day
+                pdf_bytes = generate_pdf(
+                    exp_name, 
+                    next_date, 
+                    next_day, 
+                    coral_ids, 
+                    baseline_temp, 
+                    next_peak_temp
+                )
+                
+                st.success(f"✅ {next_day} data sheet generated successfully!")
+                
+                # Download button for next day
+                filename = f"{exp_name}_{next_day.replace(' ', '')}_{next_date.strftime('%Y-%m-%d')}.pdf"
+                st.download_button(
+                    label=f"📄 Download {next_day} Data Sheet",
+                    data=pdf_bytes,
+                    file_name=filename,
+                    mime="application/pdf",
+                )
+                
+            except Exception as e:
+                st.error(f"Error generating next day PDF: {e}")

@@ -153,20 +153,24 @@ def recognize_digit(roi, model):
     
     pixel_density = np.sum(thresh) / (thresh.size * 255)
     if pixel_density < EMPTY_BOX_THRESHOLD:
+        print(f"  ❌ REJECTED: Box too sparse ({pixel_density:.4f} < {EMPTY_BOX_THRESHOLD})")
         return None    
 
 
     if np.sum(thresh) / (thresh.size * 255) < EMPTY_BOX_THRESHOLD:
+        print(f"  ❌ REJECTED: unclear why haha")
         return None
     
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
+        print(f"  ❌ REJECTED: No contours found")
         return None
     
     contour = max(contours, key=cv2.contourArea)
     x, y, w, h = cv2.boundingRect(contour)
     
-    if w < 5 or h < 5 or cv2.contourArea(contour) < MIN_CONTOUR_AREA:
+    if max(w, h) < 5 or cv2.contourArea(contour) < MIN_CONTOUR_AREA:
+        print(f"  ❌ REJECTED: doesn't meet min contour requirement. w = {w}, h = {h} ca = {cv2.contourArea(contour)}")
         return None
     
     digit = thresh[y:y+h, x:x+w]

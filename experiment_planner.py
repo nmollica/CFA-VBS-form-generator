@@ -6,6 +6,7 @@ import qrcode
 import base64
 import cv2
 import numpy as np
+import pandas as pd
 from io import BytesIO
 from PIL import Image
 from jinja2 import Environment, FileSystemLoader
@@ -48,7 +49,8 @@ def generate_pdf(experiment_id, date, day_label, coral_ids, baseline_temperature
         "date": date.strftime("%Y-%m-%d"),
         "daylabel": day_label,
         "basetemp": baseline_temperature,
-        "peaktemp": new_peak_temperature
+        "peaktemp": new_peak_temperature,
+        "num": len(coral_ids)
     }
     
     qr_code_path = create_qr_code(qr_data)
@@ -79,3 +81,23 @@ def generate_pdf(experiment_id, date, day_label, coral_ids, baseline_temperature
     )
     
     return HTML(string=html_out).write_pdf()
+
+def calculate_next_ramp(current_peak_temperature,vbs_scores,day):
+    """ Calcuates the next peak temperature given the last ramp, and the vbs score distriubtion"""
+    
+    high_thresh = day+2
+    low_thresh  = day+0
+    numeric_scores = pd.to_numeric(vbs_scores, errors='coerce').dropna()
+    num_high_scores = (numeric_scores >= high_thresh).sum()
+    num_low_scores  = (numeric_scores <= low_thresh).sum()
+
+    if num_high_scores/len(numeric_scores) > 0.75:
+        next_peak_temperature = current_peak_temperature + 0.5
+
+    elif num_low_scores/len(numeric_scores) > 0.75 and day > 0:
+        next_peak_temperature = current_peak_temperature + 1.5
+
+    else:
+        next_peak_temperature = current_peak_temperature + 1
+
+    return next_peak_temperature

@@ -368,7 +368,7 @@ def extract_table_data(warped_image, coral_ids, model):
     return results
 
 
-def process_form_image(image_bytes, coral_ids):
+def process_form_image(image_bytes, coral_ids, actual_ramp_temp):
     """Complete pipeline to process a form image and return DataFrame."""
     model = load_digit_model()
     if model is None:
@@ -400,10 +400,10 @@ def process_form_image(image_bytes, coral_ids):
     df.insert(0, 'Experiment ID', metadata.get('name', 'Unknown'))
     df.insert(1, 'Date', metadata.get('date', ''))
 
-    if 'VBS_Score' in df.columns and metadata['daylabel'] == 'Day 0':
+    if 'VBS_Score' in df.columns and metadata['day'] == 'Day 0':
         df.rename(columns={'VBS_Score': f'T_{metadata['basetemp']}_Score'}, inplace=True)
     else:
-        df.rename(columns={'VBS_Score': f'T_{metadata['peaktemp']}_Score'}, inplace=True)
+        df.rename(columns={'VBS_Score': f'T_{str(actual_ramp_temp)}_Score'}, inplace=True)
 
 
     return df, metadata

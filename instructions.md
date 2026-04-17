@@ -23,6 +23,8 @@ This application helps coral restoration practitioners collect and digitize fiel
 - Navigate to the "Datasheet Upload" tab
 - Upload the photo and enter the coral IDs in the same order
 - The system will extract handwritten scores and export to CSV
+- You can use the system to automatically generate another sheet for the next day of the experiment
+- After day 1, the system will recommend a new ramp temperature based on your results
 
 ---
 

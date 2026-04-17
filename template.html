@@ -147,8 +147,11 @@
     <div class="experiment-name">{{ experiment_id }} | {{day}}</div>
 
     <!-- 3) Date and temperature on next line -->
-    <div class="experiment-info">{{ date }} | Baseline temperature: {{ baseline_temperature }}°C | next ramp: {{ new_peak_temperature }}°C</div>
-
+    <div class="experiment-info">
+        {{ date }} | Baseline temperature: {{ baseline_temperature }}°C | default next ramp: {{ def_new_peak_T }}°C</div>
+        {% if recommended_next_ramp %}
+         | Recommended next ramp: {{ cal_new_peak_T }}°C
+        {% endif %}
     <!-- 4) QR code 1 inch from top right corner -->
     <img src="{{ qr_code_path }}" alt="QR Code" class="qr-code">
 

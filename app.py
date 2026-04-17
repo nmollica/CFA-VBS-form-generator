@@ -101,7 +101,7 @@ elif st.session_state.page == "Experiment Planner":
             day_label = "Day 0"
             
             # Call experiment planner with starting temperature
-            pdf_bytes = generate_pdf(exp_name, start_date, day_label, coral_ids, baseline_temp, peak_1_temp)
+            pdf_bytes = generate_pdf(exp_name, start_date, day_label, coral_ids, baseline_temp, peak_1_temp,calced_new_peak_T=None)
             
             st.success(f"✅ Data sheet generated successfully!")
             
@@ -133,6 +133,16 @@ elif st.session_state.page == "Datasheet Upload":
         for i in range(4)
     ])
     
+    # Enter actual ramp used (required for new sheet)
+    st.session_state.actual_ramp_temp = st.number_input(
+        "Ramp Temperature Used (°C)", 
+        min_value=25.0, 
+        max_value=40.0, 
+        value=None,
+        step=0.5,
+        help="Enter the chosen ramp temperature these corals most recently experienced"
+    )
+
     st.write("**Enter Coral IDs** (one per line, or paste column)")
 
     coral_ids_text = st.text_area("Coral IDs", default_ids, height=300)
@@ -148,12 +158,12 @@ elif st.session_state.page == "Datasheet Upload":
                     image_bytes = uploaded_file.read()
                     
                     # Call form digitizer pipeline
-                    df, metadata = process_form_image(image_bytes, coral_ids)
+                    df, metadata = process_form_image(image_bytes, coral_ids, st.session_state.actual_ramp_temp)
                     
                     # Store in session state (persists across re-renders)
                     st.session_state.processed_df = df
                     st.session_state.metadata = metadata
-                    st.session_state.csv_filename = f"{metadata['name']}_{metadata['daylabel']}.csv"
+                    st.session_state.csv_filename = f"{metadata['name']}_{metadata['day']}.csv"
                     
                     st.success("✅ Processing Complete!")
                     
@@ -175,14 +185,13 @@ elif st.session_state.page == "Datasheet Upload":
         
         with col1:
             st.metric("Experiment Name", metadata.get('name', 'not found'))
-            st.metric("Date", metadata.get('date', 'N/A'))
         
         with col2:
-            st.metric("Day Label", metadata.get('daylabel', 'not found'))
-            st.metric("Baseline Temp (°C)", metadata.get('basetemp', 'not found'))
+            st.metric("Date", metadata.get('date', 'N/A'))
         
         with col3:
-            st.metric("Peak Temp (°C)", metadata.get('peaktemp', 'not found'))
+            
+            st.metric("Day Label", metadata.get('day', 'not found'))
         
         st.markdown("---")
         
@@ -235,7 +244,7 @@ elif st.session_state.page == "Datasheet Upload":
                 metadata = st.session_state.get('metadata', {})
                 
                 # Increment day label
-                current_day = metadata.get('daylabel', 'Day 0')
+                current_day = metadata.get('day', 'Day 0')
                 day_num = int(current_day.split()[-1])
                 next_day = f"Day {day_num + 1}"
                 
@@ -244,8 +253,8 @@ elif st.session_state.page == "Datasheet Upload":
                 baseline_temp = metadata.get('basetemp')
 
                 # Calculate recommended next day temp
-                current_peak_temp = float(metadata.get('peaktemp'))
-                next_peak_temp = calculate_next_ramp(current_peak_temp,df[score_col],day_num)
+                next_peak_temp_def = st.session_state.actual_ramp_temp + 1
+                next_peak_temp_calc = calculate_next_ramp(st.session_state.actual_ramp_temp,df[score_col],day_num)
 
                 # Get current date
                 current_date = datetime.strptime(metadata.get('date', ''), '%Y-%m-%d')
@@ -260,8 +269,9 @@ elif st.session_state.page == "Datasheet Upload":
                     next_date, 
                     next_day, 
                     coral_ids, 
-                    baseline_temp, 
-                    next_peak_temp
+                    baseline_temp,
+                    next_peak_temp_def,
+                    next_peak_temp_calc
                 )
                 
                 st.success(f"✅ {next_day} data sheet generated successfully!")

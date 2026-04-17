@@ -41,15 +41,16 @@ def generate_aruco_marker(marker_id, size=100):
     return f"data:image/png;base64,{img_str}"
 
 
-def generate_pdf(experiment_id, date, day_label, coral_ids, baseline_temperature, new_peak_temperature):
-    """Generates a 2-page PDF for data collection."""
+def generate_pdf(experiment_id, date, day_label, coral_ids, baseline_temperature, default_new_peak_T,calced_new_peak_T):
+    """Generates a PDF for data collection."""
     # Create QR code with experiment metadata
     qr_data = {
         "name": experiment_id,
         "date": date.strftime("%Y-%m-%d"),
-        "daylabel": day_label,
+        "day": day_label,
         "basetemp": baseline_temperature,
-        "peaktemp": new_peak_temperature,
+        "dpT": default_new_peak_T,
+        "cpT": calced_new_peak_T,
         "num": len(coral_ids)
     }
     
@@ -73,7 +74,8 @@ def generate_pdf(experiment_id, date, day_label, coral_ids, baseline_temperature
         coral_ids=coral_ids,
         qr_code_path=qr_code_path,
         baseline_temperature=baseline_temperature,
-        new_peak_temperature=new_peak_temperature,
+        def_new_peak_T=default_new_peak_T,
+        cal_new_peak_T=calced_new_peak_T,
         aruco_tl=aruco_tl,
         aruco_tr=aruco_tr,
         aruco_bl=aruco_bl,
